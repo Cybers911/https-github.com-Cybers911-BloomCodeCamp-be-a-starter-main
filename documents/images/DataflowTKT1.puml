@@ -1,0 +1,35 @@
+@startuml
+skinparam arrowThickness 2
+
+actor Client as client
+
+participant "HelloController" as controller #LightYellow
+participant "HelloService" as helloService #LightBlue
+participant "UserDetailServiceImpl" as userService #LightSkyBlue
+participant "UserRepository" as userRepo #Pink
+database "Database" as db #LightGreen
+participant "SecurityConfig" as security #Wheat
+participant "CustomPasswordEncoder" as passwordEncoder #PowderBlue
+
+== REST API Flow ==
+client -> controller: GET /hello\n?name={name}
+controller -> helloService: sayHello(name)
+helloService -> client: "Hello, {name}!" (response)
+
+== Authentication Flow ==
+client -> controller: Secured Request
+controller -> security: Authenticate Request
+
+security -> userService: loadUserByUsername(username)
+userService -> userRepo: findByUsername(username)
+userRepo -> db: Query Users Table
+db --> userRepo: User Details
+userRepo --> userService: User Details
+userService -> passwordEncoder: Validate Encrypted Password
+passwordEncoder --> userService: Password Validated (boolean)
+userService --> security: UserDetails (Authenticated User)
+security --> controller: Authentication Outcome
+controller -> client: Response Based on Auth
+
+@enduml
+
