@@ -5,31 +5,36 @@ actor Client as client
 
 participant "HelloController" as controller #LightYellow
 participant "HelloService" as helloService #LightBlue
-participant "UserDetailServiceImpl" as userService #LightSkyBlue
-participant "UserRepository" as userRepo #Pink
-database "Database" as db #LightGreen
-participant "SecurityConfig" as security #Wheat
+participant "UserDetailServiceImpl" as userDetailsService #LightSkyBlue
+participant "HelloRepository" as helloRepo #Pink
 participant "CustomPasswordEncoder" as passwordEncoder #PowderBlue
+participant "SecurityConfig" as security #Wheat
+database "Database" as db #LightGreen
 
-== REST API Flow ==
-client -> controller: GET /hello\n?name={name}
-controller -> helloService: sayHello(name)
-helloService -> client: "Hello, {name}!" (response)
+== Greeting Flow ==
+client -> controller: GET /
+controller -> helloService: greetLearner()
+helloService -> helloRepo: Fetch greeting (hardcoded or from DB)
+helloRepo --> helloService: Hello Entity (id, message)
+helloService --> controller: Hello Entity (decoded message)
+controller -> client: HTTP Response (Greeting Message)
 
 == Authentication Flow ==
-client -> controller: Secured Request
-controller -> security: Authenticate Request
+client -> security: Secured Request with Credentials
+security -> userDetailsService: loadUserByUsername(username)
+userDetailsService -> passwordEncoder: Encode password
+passwordEncoder --> userDetailsService: Encoded password
+userDetailsService --> security: UserDetails (Authenticated User)
+security -> controller: Authentication Outcome
+controller -> client: Response Based on Authentication
 
-security -> userService: loadUserByUsername(username)
-userService -> userRepo: findByUsername(username)
-userRepo -> db: Query Users Table
-db --> userRepo: User Details
-userRepo --> userService: User Details
-userService -> passwordEncoder: Validate Encrypted Password
-passwordEncoder --> userService: Password Validated (boolean)
-userService --> security: UserDetails (Authenticated User)
-security --> controller: Authentication Outcome
-controller -> client: Response Based on Auth
+== Assignment Handling Flow ==
+client -> controller: Fetch Assignment API Request
+controller -> helloService: Process Assignment Request
+helloService -> db: Query Assignment Table
+db --> helloService: Assignment Data
+helloService -> controller: AssignmentResponseDto
+controller -> client: HTTP Response (Assignment Details)
 
 @enduml
 
