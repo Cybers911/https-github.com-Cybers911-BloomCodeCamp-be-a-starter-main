@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Entity
+@Table(name = "users") // Specifies that the database table is named "users"
 public class User implements UserDetails {
 
     @Id
