@@ -1,0 +1,107 @@
+@startuml Ticket2_Flow
+
+skinparam linetype ortho
+skinparam componentBorderColor black
+skinparam componentFontSize 10
+
+legend left
+|_= **Legend**          |= **Color**                |
+| Old Classes            | White Background         |
+| Upgraded Classes       | Green Background         |
+| New Classes            | Blue Background          |
+endlegend
+
+' Old Classes (White)
+class Assignment {
+    - status : String
+    - githubUrl : String
+    - branch : String
+    - reviewVideoUrl : String
+    - user : User
+
+    + getId()
+    + setUser(user: User)
+    ...
+}
+
+class AssignmentRepository {
+    + findByUserId(userId: Long) : List<Assignment>
+    + findById(assignmentId: Long) : Optional<Assignment>
+    ...
+}
+
+class JwtUtil {
+    + getUsernameFromToken(jwt: String) : String
+    ...
+}
+
+' Upgraded Classes (Green)
+class User <<green>> {
+    + @Table(name = "users")
+    + id : Long
+    + username : String
+    + UserDetails implementation
+    ...
+}
+
+class UserService <<green>> {
+    + findByUsername(username: String) : User
+    ...
+}
+
+' New Classes (Blue)
+class AssignmentController <<blue>> {
+    + getAllAssignments(token: String) : List<AssignmentResponseDto>
+    + getAssignmentById(id: Long) : ResponseEntity<Assignment>
+    + createAssignment(token: String, assignment: Assignment) : ResponseEntity<Assignment>
+    + updateAssignment(id: Long, assignment: Assignment) : ResponseEntity<Assignment>
+    + deleteAssignment(id: Long, token: String) : ResponseEntity<?>
+    ...
+}
+
+class AssignmentResponseDto <<blue>> {
+    - id : Long
+    - status : String
+    ...
+}
+
+class ResourceNotFoundException <<blue>> {
+}
+
+class UnauthorizedAccessException <<blue>> {
+}
+
+class GlobalExceptionHandler <<blue>> {
+    + handleResourceNotFoundException(ex: ResourceNotFoundException)
+    + handleValidationExceptions(ex: MethodArgumentNotValidException)
+    + handleGlobalException(ex: Exception)
+}
+
+class ErrorResponse <<blue>> {
+    - status : int
+    - message : String
+    - details : String
+    - timestamp : Date
+    ...
+}
+
+' Relationships and Data Flow
+AssignmentController -> JwtUtil : getUsernameFromToken(jwt)
+AssignmentController -> UserService : findByUsername(username)
+AssignmentController -> AssignmentRepository : findByUserId(userId)
+AssignmentController -> AssignmentRepository : findById(assignmentId)
+AssignmentController -> Assignment : setUser(user)
+
+' Exception Handling
+AssignmentController --> ResourceNotFoundException : Throw when not found
+AssignmentController --> UnauthorizedAccessException : Throw when unauthorized
+ResourceNotFoundException --|> Exception
+UnauthorizedAccessException --|> Exception
+
+' Data Flow Mapping: Assignment → DTO
+AssignmentController --> AssignmentResponseDto : Convert to DTO
+
+' Exception Flow
+GlobalExceptionHandler --> ErrorResponse : Map Exception to ErrorResponse
+
+@enduml

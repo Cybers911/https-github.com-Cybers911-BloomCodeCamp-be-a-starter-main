@@ -1,0 +1,88 @@
+@startuml LowLevel_DataFlow
+
+skinparam ArrowColor black
+skinparam componentBorderColor black
+skinparam componentFontSize 10
+skinparam ArrowFontSize 11
+
+actor "Client" as C
+
+package "Backend" {
+    package "Security Layer" {
+        component "JwtFilter" <<Enhanced>>
+        note left of "JwtFilter"
+            Includes:
+            - doFilterInternal
+        end note
+
+        component "JwtUtil" <<Enhanced>>
+        note left of "JwtUtil"
+            Includes:
+            - getUsernameFromToken
+            - validateToken
+        end note
+
+        component "SecurityConfig" <<Enhanced>>
+        note left of "SecurityConfig"
+            Includes:
+            - configure(HttpSecurity)
+        end note
+    }
+
+    package "Application Layer" {
+        component "AssignmentController" <<Enhanced>>
+        note left of "AssignmentController"
+            Includes:
+            - createAssignment
+            - getAllAssignments
+            - deleteAssignment
+        end note
+    }
+
+    package "Service Layer" {
+        component "UserDetailServiceImpl" <<Enhanced>>
+        note left of "UserDetailServiceImpl"
+            Includes:
+            - loadUserByUsername
+        end note
+    }
+
+    package "Repository Layer" {
+        component "UserRepository" <<Enhanced>>
+        note left of "UserRepository"
+            Includes:
+            - findByUsername
+        end note
+
+        component "AssignmentRepository" <<Enhanced>>
+        note left of "AssignmentRepository"
+            Includes:
+            - save
+            - findByUserId
+            - delete
+        end note
+    }
+}
+
+database "User Table"
+database "Assignment Table"
+
+' Data flow for authentication and request handling
+C --> "AssignmentController": API Request (with JWT)
+"AssignmentController" --> "JwtFilter": Request Intercepted
+"JwtFilter" --> "JwtUtil": Parse and Validate JWT
+"JwtUtil" --> "JwtFilter": Token Validated
+"JwtFilter" --> "UserDetailServiceImpl": loadUserByUsername
+"UserDetailServiceImpl" --> "UserRepository": Query User by Username
+"UserRepository" --> "UserDetailServiceImpl": User Entity
+"UserDetailServiceImpl" --> "JwtFilter": User Authenticated
+"JwtFilter" --> "AssignmentController": Request Authenticated
+
+' Data flow for AssignmentController actions
+"AssignmentController" --> "AssignmentRepository": save, findByUserId, delete
+"AssignmentRepository" --> "Assignment Table": Query or Update Data
+"Assignment Table" --> "AssignmentRepository": Data Response
+"AssignmentRepository" --> "AssignmentController": Processed Data
+"AssignmentController" --> C: API Response
+
+@enduml

@@ -1,0 +1,75 @@
+@startuml AssignmentWorkflow
+
+skinparam linetype ortho
+skinparam ArrowColor black
+skinparam componentBorderColor black
+skinparam componentFontSize 10
+skinparam participantFontSize 12
+skinparam sequenceParticipantBoxBackgroundColor LightSteelBlue
+
+!define NEWCLASS_COLOR CornflowerBlue
+!define UPGRADED_COLOR LightGreen
+
+legend left
+|= **Legend**                       |= **Color**         |
+| Client or External Request Source | LightSteelBlue    |
+| Backend Controllers/Services      | Green Background  |
+| Database Repository               | Blue Background   |
+endlegend
+
+' Client
+actor Client as C
+
+' Backend Controllers/Services
+participant "AssignmentController" as AC <<UPGRADED_COLOR>>
+participant "JwtUtil" as JW <<NEWCLASS_COLOR>>
+participant "UserService" as US <<UPGRADED_COLOR>>
+participant "AssignmentRepository" as AR <<NEWCLASS_COLOR>>
+
+' Database
+database "Database" as DB
+
+== Create Assignment Workflow ==
+C -> AC: POST /assignments (with JWT, Assignment Data)
+AC -> JW: getUsernameFromToken(jwt)
+JW --> AC: username
+AC -> US: findByUsername(username)
+US --> AC: User (user ID)
+AC -> AC: setUser(user)
+AC -> AR: save(assignment)
+AR -> DB: Insert new row in assignments table
+DB --> AR: Saved assignment row
+AR --> AC: Saved assignment entity
+AC --> C: 201 CREATED (Assignment Data)
+
+== Retrieve Assignment Workflow ==
+C -> AC: GET /assignments (with JWT)
+AC -> JW: getUsernameFromToken(jwt)
+JW --> AC: username
+AC -> US: findByUsername(username)
+US --> AC: User (user ID)
+AC -> AR: findByUserId(userId)
+AR -> DB: Query rows where user_id = userId
+DB --> AR: List of assignments
+AR --> AC: List<Assignment> entity
+AC -> AC: Map to DTOs
+AC --> C: 200 OK (List of Assignment DTOs)
+
+== Delete Assignment Workflow ==
+C -> AC: DELETE /assignments/{id} (with JWT)
+AC -> JW: getUsernameFromToken(jwt)
+JW --> AC: username
+AC -> US: findByUsername(username)
+US --> AC: User (user ID)
+AC -> AR: findById(id)
+AR -> DB: Query assignment by id
+DB --> AR: Assignment row
+AR --> AC: Assignment entity
+AC -> AC: Check Ownership
+AC -> AR: delete(assignment)
+AR -> DB: Delete row from assignments table
+DB --> AR: Success
+AR --> AC: Success
+AC --> C: 200 OK (Message: "Assignment deleted successfully")
+
+@enduml

@@ -1,0 +1,69 @@
+@startuml Enhanced_System_Overview
+
+skinparam linetype ortho
+skinparam ArrowColor black
+skinparam componentBorderColor black
+skinparam componentFontSize 10
+skinparam component{
+  FontSize 12
+  BackgroundColor LightSteelBlue
+}
+skinparam rectangle{
+  FontSize 11
+}
+
+legend right
+|= **Enhanced Components**           |= **Purpose**                                                                                                  |
+| `JwtUtil`                           | Responsible for parsing and validating JWT tokens; extracts the username for authentication purposes.         |
+| `JwtFilter`                         | Filters all incoming requests and ensures only authenticated requests are forwarded to the application.       |
+| `SecurityConfig`                    | Configures the security of endpoints, integrates `JwtFilter`, and implements role/permission access.          |
+| `GlobalExceptionHandler`            | Centralized handling of exceptions to provide user-friendly error responses.                                  |
+| `UserRepository`                    | Extended to include methods like `findByUsername` for user lookup.                                            |
+| `UserDetailServiceImpl`             | Enhanced to work seamlessly with JWT-based authentication for user details.                                   |
+endlegend
+
+control "Client" as C
+
+package "Backend" {
+    control "AssignmentController" as AC <<Enhanced>>
+
+    component "UserRepository" as UR <<Enhanced>>
+    component "UserDetailServiceImpl" as UDSI <<Enhanced>>
+    component "AssignmentRepository"
+
+    component "JwtUtil" <<Enhanced>>
+    component "JwtFilter" <<Enhanced>>
+    component "ErrorResponse & Exceptions" as EXC <<Enhanced>>
+
+    component "SecurityConfig" <<Enhanced>>
+}
+
+package "Database" {
+    database "User Table"
+    database "Assignment Table"
+}
+@enduml
+
+== Enhanced Workflow ==
+C -> AC: API Request (with JWT)
+AC -> JwtFilter: Validates JWT
+JwtFilter -> JwtUtil: Extract Username
+JwtUtil --> JwtFilter: Validated Username
+JwtFilter --> AC: Proceed with Request
+
+AC -> UDSI: Fetch User Details
+UDSI -> UR: findByUsername
+UR --> UDSI: User Entity
+UDSI --> AC: User Details
+AC -> AssignmentRepository: Assignment Query
+AssignmentRepository --> "Assignment Table": Fetch/Modify Assignment Data
+"Assignment Table" --> AssignmentRepository: Assignment Entity
+AssignmentRepository --> AC: Result of Operation
+
+AC -> EXC: Throws Exception (if any)
+EXC -> Client: User-Friendly Error Response
+Client <- AC: API Response (Data or Errors)
+
+== Enhancements ==
+C -> SecurityConfig: Secures Endpoints with Filter + Roles
+@enduml
