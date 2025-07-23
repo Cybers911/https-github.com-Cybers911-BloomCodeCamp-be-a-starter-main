@@ -32,20 +32,10 @@ public class AssignmentController {
     // Get all assignments for the logged-in user
     @GetMapping
     public List<AssignmentResponseDto> getAssignmentsByUser(@RequestHeader("Authorization") String token) {
-        String jwt = token.replace("Bearer ", "");
-        String username = jwtUtil.getUsernameFromToken(jwt);
-
-        User user = userService.findByUsername(username);
-
-        return assignmentRepository.findByUserId(user.getId())
-                .stream()
-                .map(assignment -> {
-                    AssignmentResponseDto dto = new AssignmentResponseDto();
-                    dto.setId(assignment.getId());
-                    dto.setStatus(assignment.getStatus());
-                    dto.setNumber(assignment.getNumber());
-                    return dto;
-                })
+        User user = userService.getUserFromToken(token);
+        List<Assignment> assignments = assignmentRepository.findByUser(user);
+        return assignments.stream()
+                .map(AssignmentResponseDto::new)
                 .collect(Collectors.toList());
     }
 
@@ -63,13 +53,10 @@ public class AssignmentController {
             @Valid @RequestBody Assignment assignment,
             @RequestHeader("Authorization") String token
     ) {
-        String jwt = token.replace("Bearer ", "");
-        String username = jwtUtil.getUsernameFromToken(jwt);
-
-        User user = userService.findByUsername(username);
+        User user = userService.getUserFromToken(token);
         assignment.setUser(user);
-
-        return ResponseEntity.status(201).body(assignmentRepository.save(assignment));
+        Assignment savedAssignment = assignmentRepository.save(assignment);
+        return ResponseEntity.ok(savedAssignment);
     }
 
     // Update an existing assignment by its ID
@@ -80,31 +67,82 @@ public class AssignmentController {
     ) {
         Assignment existingAssignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
-
         existingAssignment.setStatus(updatedAssignment.getStatus());
         existingAssignment.setGithubUrl(updatedAssignment.getGithubUrl());
         existingAssignment.setBranch(updatedAssignment.getBranch());
         existingAssignment.setReviewVideoUrl(updatedAssignment.getReviewVideoUrl());
-
-        return ResponseEntity.ok(assignmentRepository.save(existingAssignment));
+        Assignment savedAssignment = assignmentRepository.save(existingAssignment);
+        return ResponseEntity.ok(savedAssignment);
     }
 
     // Delete an assignment by its ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteAssignment(@PathVariable Long id, @RequestHeader("Authorization") String token) {
-        String jwt = token.replace("Bearer ", "");
-        String username = jwtUtil.getUsernameFromToken(jwt);
+    public ResponseEntity<?> deleteAssignment(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token
+    ) {
+        userService.getUserFromToken(token); // Ensure user exists
+        Assignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
+        assignmentRepository.delete(assignment);
+        return ResponseEntity.ok("Assignment deleted successfully.");
+    }
 
-        User user = userService.findByUsername(username);
+    // Get assignments ready for review
+    @GetMapping("/ready")
+    public List<AssignmentResponseDto> getReadyAssignments() {
+        List<Assignment> readyAssignments = assignmentRepository.findByStatus("READY");
+        return readyAssignments.stream()
+                .map(AssignmentResponseDto::new)
+                .collect(Collectors.toList());
+    }
 
+    // Get resubmitted assignments
+    @GetMapping("/resubmitted")
+    public List<AssignmentResponseDto> getResubmittedAssignments() {
+        List<Assignment> resubmittedAssignments = assignmentRepository.findByStatus("RESUBMITTED");
+        return resubmittedAssignments.stream()
+                .map(AssignmentResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    // Claim an assignment for review
+    @PostMapping("/claim/{id}")
+    public ResponseEntity<?> claimAssignment(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token
+    ) {
+        User reviewer = userService.getUserFromToken(token);
         Assignment assignment = assignmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
 
-        if (!assignment.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedAccessException("You are not authorized to delete this assignment.");
+        if (!"READY".equals(assignment.getStatus())) {
+            throw new UnauthorizedAccessException("Assignment is not ready to be claimed.");
         }
 
-        assignmentRepository.delete(assignment);
-        return ResponseEntity.ok("Assignment deleted successfully.");
+        assignment.setStatus("CLAIMED");
+        assignment.setCodeReviewer(reviewer);
+        assignmentRepository.save(assignment);
+        return ResponseEntity.ok("Assignment claimed successfully.");
+    }
+
+    // Reclaim an assignment for review
+    @PostMapping("/reclaim/{id}")
+    public ResponseEntity<?> reclaimAssignment(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token
+    ) {
+        User reviewer = userService.getUserFromToken(token);
+        Assignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment not found with id: " + id));
+
+        if (!"RESUBMITTED".equals(assignment.getStatus())) {
+            throw new UnauthorizedAccessException("Assignment is not eligible to be reclaimed.");
+        }
+
+        assignment.setStatus("CLAIMED");
+        assignment.setCodeReviewer(reviewer);
+        assignmentRepository.save(assignment);
+        return ResponseEntity.ok("Assignment reclaimed successfully.");
     }
 }

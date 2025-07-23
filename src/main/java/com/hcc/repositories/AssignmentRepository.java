@@ -1,13 +1,16 @@
 package com.hcc.repositories;
 
 import com.hcc.entities.Assignment;
+import com.hcc.entities.User;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
 public interface AssignmentRepository extends JpaRepository<Assignment, Long> {
-    // Custom method to find assignments by user ID
-    List<Assignment> findByUserId(Long userId);
+
+    // Find all assignments belonging to a specific user
+    List<Assignment> findByUser(User user);
+
+    // Find assignments by their status
+    List<Assignment> findByStatus(String status);
 }

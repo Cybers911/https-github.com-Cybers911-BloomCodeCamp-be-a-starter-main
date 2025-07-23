@@ -86,3 +86,4 @@ C --> "AssignmentController": API Request (with JWT)
 "AssignmentController" --> C: API Response
 
 @enduml
+

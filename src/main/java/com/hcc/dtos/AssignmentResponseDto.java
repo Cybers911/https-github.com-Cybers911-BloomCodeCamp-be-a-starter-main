@@ -1,20 +1,19 @@
 package com.hcc.dtos;
 
 import com.hcc.entities.Assignment;
-import com.hcc.enums.AssignmentEnum;
-import com.hcc.enums.AssignmentStatusEnum;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-
 
 public class AssignmentResponseDto {
 
     private Long id;
     private String status;
     private Integer number;
+
+    // Constructor to map from Assignment entity
+    public AssignmentResponseDto(Assignment assignment) {
+        this.id = assignment.getId();
+        this.status = assignment.getStatus();
+        this.number = assignment.getNumber();
+    }
 
     // Getters and Setters
     public Long getId() {

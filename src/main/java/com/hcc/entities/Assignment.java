@@ -26,17 +26,6 @@ public class Assignment {
     // No-args constructor
     public Assignment() {}
 
-    // All-args except id constructor
-    public Assignment(String status, Integer number, String githubUrl, String branch, String reviewVideoUrl, User user, User codeReviewer) {
-        this.status = status;
-        this.number = number;
-        this.githubUrl = githubUrl;
-        this.branch = branch;
-        this.reviewVideoUrl = reviewVideoUrl;
-        this.user = user;
-        this.codeReviewer = codeReviewer;
-    }
-
     // Getters and Setters
     public Long getId() {
         return id;
